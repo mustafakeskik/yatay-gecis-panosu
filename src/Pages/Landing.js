@@ -1,0 +1,485 @@
+import { useMemo, useState, useEffect } from "react";
+import UNIVERSITY_MAP from "../data/universities.json";
+
+const PROVINCES = [
+  "Adana","Adıyaman","Afyonkarahisar","Ağrı","Amasya","Ankara","Antalya","Artvin","Aydın","Balıkesir","Bilecik","Bingöl","Bitlis","Bolu","Burdur","Bursa","Çanakkale","Çankırı","Çorum","Denizli","Diyarbakır","Edirne","Elazığ","Erzincan","Erzurum","Eskişehir","Gaziantep","Giresun","Gümüşhane","Hakkâri","Hatay","Isparta","Mersin","İstanbul","İzmir","Kars","Kastamonu","Kayseri","Kırıkkale","Kırklareli","Kırşehir","Kocaeli","Konya","Kütahya","Malatya","Manisa","Kahramanmaraş","Mardin","Muğla","Muş","Nevşehir","Niğde","Ordu","Rize","Sakarya","Samsun","Siirt","Sinop","Sivas","Tekirdağ","Tokat","Trabzon","Tunceli","Şanlıurfa","Uşak","Van","Yozgat","Zonguldak","Aksaray","Bayburt","Karaman","Kırıkkale","Batman","Şırnak","Bartın","Ardahan","Iğdır","Yalova","Karabük","Kilis","Osmaniye","Düzce"
+];
+
+const DEPARTMENTS = [
+  "Bilgisayar Mühendisliği",
+  "Endüstri Mühendisliği",
+  "Bilgisayar Programcılığı",
+  "İşletme",
+  "Hukuk",
+  "Tıp",
+  "Mimarlık",
+  "İktisat",
+  "Psikoloji",
+  "Elektrik-Elektronik Mühendisliği",
+  "Makine Mühendisliği",
+  "Biyoteknoloji",
+  "Tarih",
+  "Eğitim Bilimleri",
+  "Gastronomi ve Mutfak Sanatları",
+  "Siyaset Bilimi",
+  "Moleküler Biyoloji ve Genetik",
+  "Çevre Mühendisliği",
+  "Grafik Tasarım",
+  "Sağlık Yönetimi",
+  "Fen Bilimleri Eğitimi",
+  "Kimya Mühendisliği",
+  "Havacılık ve Uzay Mühendisliği",
+  "Denizcilik",
+  "Farmakoloji",
+  "Medya ve İletişim",
+  "Elektronik Teknolojisi",
+  "Turizm ve Otelcilik",
+  "Sosyoloji",
+  "Bankacılık ve Finans",
+  "Bilişim Sistemleri",
+  "Çocuk Gelişimi",
+  "Rehberlik ve Psikolojik Danışmanlık",
+  "Gıda Mühendisliği",
+  "Metalurji ve Malzeme Mühendisliği",
+  "Nanoteknoloji",
+  "Dijital Oyun Tasarımı",
+  "Hukuk",
+];
+
+// Departments that are typically Önlisans (associate) programs
+const ASSOCIATE_DEPARTMENTS = new Set([
+  "Bilgisayar Programcılığı",
+  "Elektronik Teknolojisi",
+  "Çocuk Gelişimi",
+  "Turizm ve Otelcilik",
+  "Bilişim Sistemleri",
+  "Bankacılık ve Finans",
+  "Dijital Oyun Tasarımı",
+  "Grafik Tasarım",
+]);
+
+const getDegreeForDepartment = (department) => (ASSOCIATE_DEPARTMENTS.has(department) ? "Önlisans" : "Lisans");
+
+// Build programs so that each city can have multiple universities (devlet + vakıf)
+const AVAILABLE_PROGRAMS = PROVINCES.flatMap((city, index) => {
+  const list = UNIVERSITY_MAP[city] || [`${city} Üniversitesi`];
+  return list.map((university, uIdx) => {
+    const department = DEPARTMENTS[(index + uIdx) % DEPARTMENTS.length];
+    const degree = getDegreeForDepartment(department);
+    const minAgno = parseFloat((2.60 + ((index + uIdx) % 21) * 0.05).toFixed(2));
+    const minScore = 240 + (((index + uIdx) + 5) % 31) * 5;
+    const id = `u${index + 1}-${uIdx + 1}`;
+
+    const normalizeUniForUrl = (name) =>
+      name
+        .toLowerCase()
+        .replace(/ğ/g, "g")
+        .replace(/ü/g, "u")
+        .replace(/ş/g, "s")
+        .replace(/ı/g, "i")
+        .replace(/ö/g, "o")
+        .replace(/ç/g, "c")
+        .replace(/[^a-z0-9]/g, "");
+
+    return {
+      id,
+      university,
+      city,
+      department,
+      degree,
+      minAgno,
+      minScore,
+      transferUrl: `https://www.${normalizeUniForUrl(university)}.edu.tr/`,
+      requirements: `${university} ${degree.toLowerCase()} yatay geçişinde yaklaşık ${minAgno} AGNO ve ${minScore} YKS puanı beklenir.`,
+    };
+  });
+});
+
+const UNIVERSITY_NAMES = [...new Set(AVAILABLE_PROGRAMS.map((program) => program.university))];
+const CITIES = [...new Set(AVAILABLE_PROGRAMS.map((program) => program.city))];
+
+const normalizeSearch = (value = "") =>
+  value
+    .toString()
+    .toLowerCase()
+    .replace(/ğ/g, "g")
+    .replace(/ü/g, "u")
+    .replace(/ş/g, "s")
+    .replace(/ı/g, "i")
+    .replace(/i̇/g, "i")
+    .replace(/ö/g, "o")
+    .replace(/ç/g, "c")
+    .replace(/[^a-z0-9 ]/g, "")
+    .trim();
+
+function Landing({ onContinue }) {
+  const [agno, setAgno] = useState("");
+  const [score, setScore] = useState("");
+  const [degree, setDegree] = useState("Önlisans");
+  const [selectedUniversities, setSelectedUniversities] = useState(UNIVERSITY_NAMES);
+  const [selectedDepartments, setSelectedDepartments] = useState(DEPARTMENTS);
+  const [selectedCities, setSelectedCities] = useState(CITIES);
+  const [selectedPrograms, setSelectedPrograms] = useState([]);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [universityFilter, setUniversityFilter] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState("");
+  const [cityFilter, setCityFilter] = useState("");
+
+  useEffect(() => {
+    document.title = "Yatay Geçiş Başvuru Panosu";
+  }, []);
+
+  const numericAgno = parseFloat(agno.replace(",", "."));
+  const numericScore = parseFloat(score.replace(",", "."));
+  const hasValidInput = !Number.isNaN(numericAgno) && !Number.isNaN(numericScore);
+
+  const filteredPrograms = useMemo(() => {
+    return AVAILABLE_PROGRAMS.filter((program) => {
+      const meetsDegree = program.degree === degree;
+      const meetsUniversity = selectedUniversities.includes(program.university);
+      const meetsDepartment = selectedDepartments.includes(program.department);
+      const meetsCity = selectedCities.includes(program.city);
+      const meetsAgno = hasValidInput ? numericAgno >= program.minAgno : true;
+      const meetsScore = hasValidInput ? numericScore >= program.minScore : true;
+      return meetsDegree && meetsUniversity && meetsDepartment && meetsCity && meetsAgno && meetsScore;
+    });
+  }, [degree, selectedUniversities, selectedDepartments, selectedCities, numericAgno, numericScore, hasValidInput]);
+
+  const searchResults = useMemo(() => {
+    return hasSearched ? filteredPrograms : [];
+  }, [hasSearched, filteredPrograms]);
+
+  const isAllProgramsSelected = searchResults.length > 0 && searchResults.every((program) => selectedPrograms.includes(program.id));
+
+  const toggleFilter = (value, values, setValues) => {
+    setValues((current) =>
+      current.includes(value) ? current.filter((item) => item !== value) : [...current, value]
+    );
+  };
+
+  const visibleUniversities = UNIVERSITY_NAMES.filter((name) =>
+    normalizeSearch(name).startsWith(normalizeSearch(universityFilter))
+  );
+
+  const visibleDepartments = DEPARTMENTS.filter((department) =>
+    normalizeSearch(department).startsWith(normalizeSearch(departmentFilter))
+  );
+
+  const visibleCities = CITIES.filter((city) =>
+    normalizeSearch(city).startsWith(normalizeSearch(cityFilter))
+  );
+
+  const toggleAllFilters = () => {
+    const isAllSelected = selectedUniversities.length === UNIVERSITY_NAMES.length && selectedDepartments.length === DEPARTMENTS.length && selectedCities.length === CITIES.length;
+    if (isAllSelected) {
+      setSelectedUniversities([]);
+      setSelectedDepartments([]);
+      setSelectedCities([]);
+    } else {
+      setSelectedUniversities(UNIVERSITY_NAMES);
+      setSelectedDepartments(DEPARTMENTS);
+      setSelectedCities(CITIES);
+    }
+  };
+
+  const toggleAllPrograms = () => {
+    if (isAllProgramsSelected) {
+      setSelectedPrograms([]);
+    } else {
+      setSelectedPrograms(searchResults.map((program) => program.id));
+    }
+  };
+
+  const handleProgramToggle = (id) => {
+    setSelectedPrograms((current) =>
+      current.includes(id) ? current.filter((programId) => programId !== id) : [...current, id]
+    );
+  };
+
+  const handleSearch = () => {
+    if (!hasValidInput) {
+      setHasSearched(true);
+      return;
+    }
+    setHasSearched(true);
+  };
+
+  const handleContinue = () => {
+    const selectedApplications = searchResults
+      .filter((program) => selectedPrograms.includes(program.id))
+      .map((program) => ({
+        id: `${program.id}-${Date.now()}`,
+        programId: program.id,
+        university: program.university,
+        department: program.department,
+        city: program.city,
+        degree: program.degree,
+        transferUrl: program.transferUrl,
+        gpa: numericAgno.toFixed(2),
+        status: "Belgeler Hazırlanıyor",
+        createdAt: new Date().toISOString(),
+      }));
+    onContinue(selectedApplications);
+  };
+
+  return (
+    <main className="container py-5">
+      <div className="landing-banner mb-4 rounded-3 overflow-hidden">
+        <div className="container py-4 d-flex align-items-center gap-3">
+          <img src="/logo.svg" alt="logo" style={{ height: 64, width: 64 }} />
+          <div>
+            <h1 className="display-6 fw-semibold text-white mb-1">Yatay Geçiş Başvuru Panosu</h1>
+            <p className="text-white-50 mb-0">YKS puanınız ve AGNO'nuzu girerek yatay geçiş için uygun üniversite ve bölümleri seçin.</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="card shadow-sm mb-4 rounded-0">
+        <div className="card-body">
+          <h5 className="card-title">Arama Bilgileri</h5>
+          <div className="row row-cols-1 row-cols-md-4 g-3 align-items-start">
+            <div className="col d-flex flex-column">
+              <label htmlFor="agno" className="form-label mb-2">
+                AGNO
+              </label>
+              <input
+                id="agno"
+                type="number"
+                step="0.01"
+                min="0"
+                max="4"
+                className="form-control"
+                value={agno}
+                onChange={(event) => setAgno(event.target.value)}
+                placeholder="2.80"
+              />
+            </div>
+            <div className="col d-flex flex-column">
+              <label htmlFor="score" className="form-label mb-2">
+                YKS Puanı
+              </label>
+              <input
+                id="score"
+                type="number"
+                className="form-control"
+                value={score}
+                onChange={(event) => setScore(event.target.value)}
+                placeholder="Sınav puanınızı girin"
+              />
+            </div>
+            <div className="col d-flex flex-column">
+              <label className="form-label mb-2">Eğitim Düzeyi</label>
+              <div className="btn-group w-100" role="group" aria-label="Eğitim düzeyi">
+                {['Önlisans', 'Lisans'].map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    className={`btn ${degree === option ? 'btn-primary' : 'btn-outline-secondary'}`}
+                    onClick={() => setDegree(option)}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="col d-flex justify-content-end align-items-start gap-2 flex-wrap">
+              <button type="button" className="btn btn-primary" onClick={handleSearch}>
+                Ara
+              </button>
+            </div>
+          </div>
+
+            <div className="mt-4 border rounded-3 p-3 bg-light">
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <h6 className="mb-0">Filtreler</h6>
+                <button type="button" className="btn btn-sm btn-outline-primary" onClick={toggleAllFilters}>
+                  {selectedUniversities.length === UNIVERSITY_NAMES.length && selectedDepartments.length === DEPARTMENTS.length && selectedCities.length === CITIES.length
+                    ? 'Tümünü Kaldır'
+                    : 'Hepsini Seç'}
+                </button>
+              </div>
+
+              <div className="row row-cols-1 row-cols-md-3 g-3">
+                <div>
+                  <p className="fw-semibold mb-2">Üniversiteler</p>
+                  <input
+                    type="text"
+                    className="form-control form-control-sm mb-2"
+                    placeholder="Üniversite ara"
+                    value={universityFilter}
+                    onChange={(event) => setUniversityFilter(event.target.value)}
+                  />
+                  {universityFilter.trim() === '' ? (
+                    <div className="text-muted small">Aramak için üniversite adını yazın.</div>
+                  ) : visibleUniversities.length === 0 ? (
+                    <div className="text-muted small">Eşleşme bulunamadı.</div>
+                  ) : (
+                    <div style={{ maxHeight: 260, overflowY: 'auto' }}>
+                      {visibleUniversities.slice(0, 100).map((name) => (
+                        <div key={name} className="form-check">
+                          <input
+                            id={`uni-${name}`}
+                            className="form-check-input"
+                            type="checkbox"
+                            checked={selectedUniversities.includes(name)}
+                            onChange={() => toggleFilter(name, selectedUniversities, setSelectedUniversities)}
+                          />
+                          <label htmlFor={`uni-${name}`} className="form-check-label">
+                            {name}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <p className="fw-semibold mb-2">Bölümler</p>
+                  <input
+                    type="text"
+                    className="form-control form-control-sm mb-2"
+                    placeholder="Bölüm ara"
+                    value={departmentFilter}
+                    onChange={(event) => setDepartmentFilter(event.target.value)}
+                  />
+                  {departmentFilter.trim() === '' ? (
+                    <div className="text-muted small">Aramak için bölüm adını yazın.</div>
+                  ) : visibleDepartments.length === 0 ? (
+                    <div className="text-muted small">Eşleşme bulunamadı.</div>
+                  ) : (
+                    <div style={{ maxHeight: 260, overflowY: 'auto' }}>
+                      {visibleDepartments.slice(0, 100).map((department) => (
+                        <div key={department} className="form-check">
+                          <input
+                            id={`dept-${department}`}
+                            className="form-check-input"
+                            type="checkbox"
+                            checked={selectedDepartments.includes(department)}
+                            onChange={() => toggleFilter(department, selectedDepartments, setSelectedDepartments)}
+                          />
+                          <label htmlFor={`dept-${department}`} className="form-check-label">
+                            {department}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <p className="fw-semibold mb-2">Şehirler</p>
+                  <input
+                    type="text"
+                    className="form-control form-control-sm mb-2"
+                    placeholder="Şehir ara"
+                    value={cityFilter}
+                    onChange={(event) => setCityFilter(event.target.value)}
+                  />
+                  {cityFilter.trim() === '' ? (
+                    <div className="text-muted small">Aramak için şehir adını yazın.</div>
+                  ) : visibleCities.length === 0 ? (
+                    <div className="text-muted small">Eşleşme bulunamadı.</div>
+                  ) : (
+                    <div style={{ maxHeight: 260, overflowY: 'auto' }}>
+                      {visibleCities.slice(0, 100).map((city) => (
+                        <div key={city} className="form-check">
+                          <input
+                            id={`city-${city}`}
+                            className="form-check-input"
+                            type="checkbox"
+                            checked={selectedCities.includes(city)}
+                            onChange={() => toggleFilter(city, selectedCities, setSelectedCities)}
+                          />
+                          <label htmlFor={`city-${city}`} className="form-check-label">
+                            {city}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+        </div>
+      </div>
+
+      {/* Selected chips and action button placed together */}
+      <div className="d-flex justify-content-between align-items-center mb-3 gap-2">
+        <div className="d-flex align-items-center gap-2">
+          {selectedPrograms.length > 0 ? (
+            <div className="d-flex flex-wrap gap-2">
+              {searchResults
+                .filter((program) => selectedPrograms.includes(program.id))
+                .map((program) => (
+                  <span key={program.id} className="badge bg-secondary py-2 px-3">
+                    {program.university} - {program.department}
+                  </span>
+                ))}
+            </div>
+          ) : (
+            <span className="text-muted small">Henüz seçim yapılmadı</span>
+          )}
+        </div>
+
+        <div className="text-end">
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={!selectedPrograms.length || !hasValidInput || !hasSearched}
+            onClick={handleContinue}
+          >
+            Seçilenlerle Başvurulara Geç
+          </button>
+        </div>
+      </div>
+      <div className="card shadow-sm">
+        <div className="card-body">          <div className="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <h5 className="card-title">Arama Sonuçları</h5>
+              <p className="text-muted mb-0">Aşağıdaki sonuçlar YKS ve AGNO değerlerinize göre sıralanmıştır.</p>
+            </div>
+            <button type="button" className="btn btn-sm btn-outline-secondary" onClick={toggleAllPrograms}>
+              {isAllProgramsSelected ? 'Seçimleri Kaldır' : 'Hepsini Seç'}
+            </button>
+          </div>
+
+          {!hasSearched ? (
+            <div className="alert alert-info">Arama yapmak için AGNO ve YKS puanınızı girin, sonra Ara butonuna basın.</div>
+          ) : !hasValidInput ? (
+            <div className="alert alert-danger">Geçerli bir AGNO ve YKS puanı girin.</div>
+          ) : searchResults.length === 0 ? (
+            <div className="alert alert-warning">Seçtiğiniz filtrelerle eşleşen bir program bulunamadı.</div>
+          ) : (
+            <div className="list-group">
+              {searchResults.map((program) => (
+                <label
+                  key={program.id}
+                  className={`list-group-item list-group-item-action d-flex align-items-start gap-3 ${selectedPrograms.includes(program.id) ? 'active' : ''}`}
+                >
+                  <input
+                    className="form-check-input mt-1"
+                    type="checkbox"
+                    checked={selectedPrograms.includes(program.id)}
+                    onChange={() => handleProgramToggle(program.id)}
+                  />
+                  <div className="flex-grow-1">
+                    <div className="d-flex justify-content-between align-items-start gap-3">
+                      <div>
+                        <strong>{program.university}</strong>
+                        <div>{program.department}</div>
+                      </div>
+                      <span className="badge bg-success">{program.degree}</span>
+                    </div>
+                    <p className="mb-1 text-muted small">{program.city} · AGNO {program.minAgno} · YKS {program.minScore}</p>
+                    <p className="mb-2 small">{program.requirements}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+    </main>
+  );
+}
+
+export default Landing;

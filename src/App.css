@@ -1,0 +1,86 @@
+body {
+  min-height: 100vh;
+  background: #f8f9fa;
+  color: #212529;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.card {
+  border-radius: 1rem;
+}
+
+button:focus,
+input:focus,
+select:focus {
+  outline: 3px solid rgba(13, 110, 253, 0.25);
+  outline-offset: 2px;
+}
+
+/* Customize selected list-group items: avoid full blue background on selection
+   Show a subtle left indicator and keep item background neutral */
+.list-group-item.active {
+  background-color: transparent !important;
+  color: inherit !important;
+  border-color: rgba(0,0,0,0.06) !important;
+  box-shadow: none !important;
+  position: relative;
+}
+.list-group-item.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  background-color: #0d6efd; /* bootstrap primary */
+  border-radius: 4px 0 0 4px;
+}
+.list-group-item .form-check-input {
+  margin-right: .75rem;
+}
+.list-group-item.active .form-check-input {
+  background-color: transparent;
+  border-color: #0d6efd;
+}
+
+/* Action panel inside application cards */
+.action-panel {
+  background: linear-gradient(180deg, rgba(13,110,253,0.03), rgba(13,110,253,0.01));
+}
+.action-panel .btn,
+.action-panel a.btn {
+  flex: 0 0 auto;
+}
+.action-panel .d-flex {
+  flex-wrap: wrap;
+}
+.action-panel .badge {
+  font-size: 0.9rem;
+  max-width: 160px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.action-panel .btn-outline-secondary {
+  min-width: 140px;
+}
+
+/* Landing banner and decorations */
+.landing-banner {
+  background: linear-gradient(135deg, #2F80ED 0%, #56CCF2 100%);
+  color: #fff;
+  border-radius: 0.75rem;
+}
+.landing-banner img {
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(47,128,237,0.22);
+}
+.landing-banner .container {
+  max-width: 100%;
+}
+.landing-banner h1, .landing-banner p { color: #fff; }
+.card.shadow-sm.rounded-0 { border-radius: 0.75rem; }
+

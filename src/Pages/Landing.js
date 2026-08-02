@@ -201,7 +201,23 @@ function Landing({ onContinue }) {
     <main className="container py-5">
       <div className="landing-banner mb-4 rounded-3 overflow-hidden">
         <div className="container py-4 d-flex align-items-center gap-3">
-          <img src="/logo.svg" alt="logo" style={{ height: 64, width: 64 }} />
+          <div
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: "50%",
+              backgroundColor: "#ffffff",
+              display: "grid",
+              placeItems: "center",
+              boxShadow: "0 10px 25px rgba(0, 0, 0, 0.12)",
+            }}
+          >
+            <img
+              src="/favicon.png"
+              alt="logo"
+              style={{ width: 42, height: 42, objectFit: "contain" }}
+            />
+          </div>
           <div>
             <h1 className="display-6 fw-semibold text-white mb-1">Yatay Geçiş Başvuru Panosu</h1>
             <p className="text-white-50 mb-0">YKS puanınız ve AGNO'nuzu girerek yatay geçiş için uygun üniversite ve bölümleri seçin.</p>
@@ -212,7 +228,6 @@ function Landing({ onContinue }) {
       <div className="card shadow-sm mb-4 rounded-0">
         <div className="card-body">
           <div className="d-flex align-items-center gap-2 mb-3">
-            <img src="/favicon.png" alt="Logo" width={32} height={32} style={{ borderRadius: 8 }} />
             <h5 className="card-title mb-0">Arama Bilgileri</h5>
           </div>
           <div className="row row-cols-1 row-cols-md-4 g-3 align-items-start">

@@ -1,9 +1,31 @@
 import { useMemo, useState, useEffect } from "react";
-import UNIVERSITY_MAP from "../data/universities.json";
+import YOK_OFFERS from "../data/yok-offers.json";
 
-const PROVINCES = [
-  "Adana","Adıyaman","Afyonkarahisar","Ağrı","Amasya","Ankara","Antalya","Artvin","Aydın","Balıkesir","Bilecik","Bingöl","Bitlis","Bolu","Burdur","Bursa","Çanakkale","Çankırı","Çorum","Denizli","Diyarbakır","Edirne","Elazığ","Erzincan","Erzurum","Eskişehir","Gaziantep","Giresun","Gümüşhane","Hakkâri","Hatay","Isparta","Mersin","İstanbul","İzmir","Kars","Kastamonu","Kayseri","Kırıkkale","Kırklareli","Kırşehir","Kocaeli","Konya","Kütahya","Malatya","Manisa","Kahramanmaraş","Mardin","Muğla","Muş","Nevşehir","Niğde","Ordu","Rize","Sakarya","Samsun","Siirt","Sinop","Sivas","Tekirdağ","Tokat","Trabzon","Tunceli","Şanlıurfa","Uşak","Van","Yozgat","Zonguldak","Aksaray","Bayburt","Karaman","Kırıkkale","Batman","Şırnak","Bartın","Ardahan","Iğdır","Yalova","Karabük","Kilis","Osmaniye","Düzce"
-];
+const AVAILABLE_PROGRAMS = YOK_OFFERS.offers.map((offer, index) => {
+  const normalizedUniversity = offer.university.replace(/\s*\([^)]*\)$/, "");
+  const normalizeUniForUrl = (name) =>
+    name
+      .toLowerCase()
+      .replace(/ğ/g, "g")
+      .replace(/ü/g, "u")
+      .replace(/ş/g, "s")
+      .replace(/ı/g, "i")
+      .replace(/ö/g, "o")
+      .replace(/ç/g, "c")
+      .replace(/[^a-z0-9]/g, "");
+
+  return {
+    id: offer.id || `yok-${index}`,
+    university: normalizedUniversity,
+    city: offer.city,
+    department: offer.department,
+    degree: offer.degree === "ÖNLISANS" ? "Önlisans" : "Lisans",
+    minAgno: offer.degree === "ÖNLISANS" ? 2.2 : 2.6,
+    minScore: offer.minScore || 0,
+    transferUrl: `https://www.${normalizeUniForUrl(normalizedUniversity)}.edu.tr/`,
+    requirements: `${offer.department} için YÖK Atlas verilerine göre en düşük YKS puanı ${offer.minScore}.`,
+  };
+});
 
 const DEPARTMENTS = [
   "Bilgisayar Mühendisliği",
@@ -46,54 +68,7 @@ const DEPARTMENTS = [
   "Hukuk",
 ];
 
-// Departments that are typically Önlisans (associate) programs
-const ASSOCIATE_DEPARTMENTS = new Set([
-  "Bilgisayar Programcılığı",
-  "Elektronik Teknolojisi",
-  "Çocuk Gelişimi",
-  "Turizm ve Otelcilik",
-  "Bilişim Sistemleri",
-  "Bankacılık ve Finans",
-  "Dijital Oyun Tasarımı",
-  "Grafik Tasarım",
-]);
 
-const getDegreeForDepartment = (department) => (ASSOCIATE_DEPARTMENTS.has(department) ? "Önlisans" : "Lisans");
-
-// Build programs so that each city can have multiple universities (devlet + vakıf)
-const AVAILABLE_PROGRAMS = PROVINCES.flatMap((city, index) => {
-  const list = UNIVERSITY_MAP[city] || [`${city} Üniversitesi`];
-  return list.map((university, uIdx) => {
-    const department = DEPARTMENTS[(index + uIdx) % DEPARTMENTS.length];
-    const degree = getDegreeForDepartment(department);
-    const minAgno = parseFloat((2.60 + ((index + uIdx) % 21) * 0.05).toFixed(2));
-    const minScore = 240 + (((index + uIdx) + 5) % 31) * 5;
-    const id = `u${index + 1}-${uIdx + 1}`;
-
-    const normalizeUniForUrl = (name) =>
-      name
-        .toLowerCase()
-        .replace(/ğ/g, "g")
-        .replace(/ü/g, "u")
-        .replace(/ş/g, "s")
-        .replace(/ı/g, "i")
-        .replace(/ö/g, "o")
-        .replace(/ç/g, "c")
-        .replace(/[^a-z0-9]/g, "");
-
-    return {
-      id,
-      university,
-      city,
-      department,
-      degree,
-      minAgno,
-      minScore,
-      transferUrl: `https://www.${normalizeUniForUrl(university)}.edu.tr/`,
-      requirements: `${university} ${degree.toLowerCase()} yatay geçişinde yaklaşık ${minAgno} AGNO ve ${minScore} YKS puanı beklenir.`,
-    };
-  });
-});
 
 const UNIVERSITY_NAMES = [...new Set(AVAILABLE_PROGRAMS.map((program) => program.university))];
 const CITIES = [...new Set(AVAILABLE_PROGRAMS.map((program) => program.city))];
@@ -236,7 +211,10 @@ function Landing({ onContinue }) {
 
       <div className="card shadow-sm mb-4 rounded-0">
         <div className="card-body">
-          <h5 className="card-title">Arama Bilgileri</h5>
+          <div className="d-flex align-items-center gap-2 mb-3">
+            <img src="/favicon.png" alt="Logo" width={32} height={32} style={{ borderRadius: 8 }} />
+            <h5 className="card-title mb-0">Arama Bilgileri</h5>
+          </div>
           <div className="row row-cols-1 row-cols-md-4 g-3 align-items-start">
             <div className="col d-flex flex-column">
               <label htmlFor="agno" className="form-label mb-2">

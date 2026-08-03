@@ -3,8 +3,15 @@ import YOK_OFFERS from "../data/yok-offers.json";
 
 const AVAILABLE_PROGRAMS = YOK_OFFERS.offers.map((offer, index) => {
   const normalizedUniversity = offer.university.replace(/\s*\([^)]*\)$/, "");
-  const normalizeUniForUrl = (name) =>
-    name
+  const normalizeUniForUrl = (name) => {
+    const cleaned = name
+      .replace(/\s+üniversitesi?$/i, "")
+      .replace(/\s+yüksekokulu?$/i, "")
+      .replace(/\s+fakültesi?$/i, "")
+      .replace(/\s+konservatuarı?$/i, "")
+      .replace(/\s+meslek yüksekokulu?$/i, "");
+
+    return cleaned
       .toLowerCase()
       .replace(/ğ/g, "g")
       .replace(/ü/g, "u")
@@ -13,6 +20,7 @@ const AVAILABLE_PROGRAMS = YOK_OFFERS.offers.map((offer, index) => {
       .replace(/ö/g, "o")
       .replace(/ç/g, "c")
       .replace(/[^a-z0-9]/g, "");
+  };
 
   return {
     id: offer.id || `yok-${index}`,
@@ -144,17 +152,19 @@ function Landing({ onContinue }) {
     normalizeSearch(city).startsWith(normalizeSearch(cityFilter))
   );
 
-  const toggleAllFilters = () => {
-    const isAllSelected = selectedUniversities.length === UNIVERSITY_NAMES.length && selectedDepartments.length === DEPARTMENTS.length && selectedCities.length === CITIES.length;
-    if (isAllSelected) {
-      setSelectedUniversities([]);
-      setSelectedDepartments([]);
-      setSelectedCities([]);
-    } else {
-      setSelectedUniversities(UNIVERSITY_NAMES);
-      setSelectedDepartments(DEPARTMENTS);
-      setSelectedCities(CITIES);
-    }
+  const toggleAllUniversities = () => {
+    const isAllSelected = selectedUniversities.length === UNIVERSITY_NAMES.length;
+    setSelectedUniversities(isAllSelected ? [] : UNIVERSITY_NAMES);
+  };
+
+  const toggleAllDepartments = () => {
+    const isAllSelected = selectedDepartments.length === DEPARTMENTS.length;
+    setSelectedDepartments(isAllSelected ? [] : DEPARTMENTS);
+  };
+
+  const toggleAllCities = () => {
+    const isAllSelected = selectedCities.length === CITIES.length;
+    setSelectedCities(isAllSelected ? [] : CITIES);
   };
 
   const toggleAllPrograms = () => {
@@ -285,16 +295,21 @@ function Landing({ onContinue }) {
             <div className="mt-4 border rounded-3 p-3 bg-light">
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <h6 className="mb-0">Filtreler</h6>
-                <button type="button" className="btn btn-sm btn-outline-primary" onClick={toggleAllFilters}>
-                  {selectedUniversities.length === UNIVERSITY_NAMES.length && selectedDepartments.length === DEPARTMENTS.length && selectedCities.length === CITIES.length
-                    ? 'Tümünü Kaldır'
-                    : 'Hepsini Seç'}
-                </button>
               </div>
 
               <div className="row row-cols-1 row-cols-md-3 g-3">
                 <div>
-                  <p className="fw-semibold mb-2">Üniversiteler</p>
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <p className="fw-semibold mb-0">Üniversiteler</p>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-primary"
+                      style={{ minWidth: 110, padding: "0.25rem 0.5rem", fontSize: "0.8rem" }}
+                      onClick={toggleAllUniversities}
+                    >
+                      {selectedUniversities.length === UNIVERSITY_NAMES.length ? 'Seçimleri Kaldır' : 'Hepsini Seç'}
+                    </button>
+                  </div>
                   <input
                     type="text"
                     className="form-control form-control-sm mb-2"
@@ -326,7 +341,17 @@ function Landing({ onContinue }) {
                   )}
                 </div>
                 <div>
-                  <p className="fw-semibold mb-2">Bölümler</p>
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <p className="fw-semibold mb-0">Bölümler</p>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-primary"
+                      style={{ minWidth: 110, padding: "0.25rem 0.5rem", fontSize: "0.8rem" }}
+                      onClick={toggleAllDepartments}
+                    >
+                      {selectedDepartments.length === DEPARTMENTS.length ? 'Seçimleri Kaldır' : 'Hepsini Seç'}
+                    </button>
+                  </div>
                   <input
                     type="text"
                     className="form-control form-control-sm mb-2"
@@ -358,7 +383,17 @@ function Landing({ onContinue }) {
                   )}
                 </div>
                 <div>
-                  <p className="fw-semibold mb-2">Şehirler</p>
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <p className="fw-semibold mb-0">Şehirler</p>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-primary"
+                      style={{ minWidth: 110, padding: "0.25rem 0.5rem", fontSize: "0.8rem" }}
+                      onClick={toggleAllCities}
+                    >
+                      {selectedCities.length === CITIES.length ? 'Seçimleri Kaldır' : 'Hepsini Seç'}
+                    </button>
+                  </div>
                   <input
                     type="text"
                     className="form-control form-control-sm mb-2"
@@ -446,6 +481,7 @@ function Landing({ onContinue }) {
                 <label
                   key={program.id}
                   className={`list-group-item list-group-item-action d-flex align-items-start gap-3 ${selectedPrograms.includes(program.id) ? 'active' : ''}`}
+                  style={{ backgroundColor: '#e7f0ff', borderColor: '#c7dbff' }}
                 >
                   <input
                     className="form-check-input mt-1"
@@ -461,8 +497,15 @@ function Landing({ onContinue }) {
                       </div>
                       <span className="badge bg-success">{program.degree}</span>
                     </div>
-                    <p className="mb-1 text-muted small">{program.city} · AGNO {program.minAgno} · YKS {program.minScore}</p>
-                    <p className="mb-2 small">{program.requirements}</p>
+                      <div className="d-flex flex-wrap gap-2 align-items-center mb-1">
+                      <span className="badge text-white" style={{ backgroundColor: '#d63333' }}>
+                        AGNO {program.minAgno}
+                      </span>
+                      <span className="badge text-white" style={{ backgroundColor: '#d63333' }}>
+                        Taban YKS {program.minScore}
+                      </span>
+                    </div>
+                    <p className="mb-2" style={{ color: '#000' }}>{program.requirements}</p>
                   </div>
                 </label>
               ))}

@@ -18,8 +18,8 @@ function App() {
     <Landing
       onContinue={(applications, openNow = false) => {
         setInitialApplications(applications);
-        setOpenImmediately(Boolean(openNow));
         setIsDashboardVisible(true);
+        
       }}
     />
   );

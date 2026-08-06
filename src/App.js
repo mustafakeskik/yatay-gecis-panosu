@@ -7,7 +7,7 @@ import "./custom-styles.css";
 function App() {
   const [initialApplications, setInitialApplications] = useState([]);
   const [isDashboardVisible, setIsDashboardVisible] = useState(false);
-  const [openImmediately, setOpenImmediately] = useState(false);
+  
 
   return isDashboardVisible ? (
     <Dashboard

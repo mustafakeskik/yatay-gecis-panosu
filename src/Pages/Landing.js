@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import YOK_OFFERS from "../data/yok-offers.json";
+import UNIVERSITY_DOMAINS from "../data/university-domains.json";
 
 const AVAILABLE_PROGRAMS = YOK_OFFERS.offers.map((offer, index) => {
   const normalizedUniversity = offer.university.replace(/\s*\([^)]*\)$/, "");
@@ -30,7 +31,10 @@ const AVAILABLE_PROGRAMS = YOK_OFFERS.offers.map((offer, index) => {
     degree: offer.degree === "ÖNLISANS" ? "Önlisans" : "Lisans",
     minAgno: offer.degree === "ÖNLISANS" ? 2.2 : 2.6,
     minScore: offer.minScore || 0,
-    transferUrl: `https://www.${normalizeUniForUrl(normalizedUniversity)}.edu.tr/`,
+    // Try mapping to a known official domain first; otherwise fallback to Google search.
+    transferUrl: UNIVERSITY_DOMAINS[normalizedUniversity]
+      ? UNIVERSITY_DOMAINS[normalizedUniversity]
+      : `https://www.google.com/search?q=${encodeURIComponent(normalizedUniversity + ' resmi sitesi')}`,
     requirements: `${offer.department} için YÖK Atlas verilerine göre en düşük YKS puanı ${offer.minScore}.`,
   };
 });
@@ -204,8 +208,9 @@ function Landing({ onContinue }) {
         status: "Belgeler Hazırlanıyor",
         createdAt: new Date().toISOString(),
       }));
-    onContinue(selectedApplications);
+    onContinue(selectedApplications, true);
   };
+
 
   return (
     <main className="container py-5">
@@ -450,11 +455,11 @@ function Landing({ onContinue }) {
         <div className="text-end">
           <button
             type="button"
-            className="btn btn-primary"
+            className="btn btn-orange-custom"
             disabled={!selectedPrograms.length || !hasValidInput || !hasSearched}
             onClick={handleContinue}
           >
-            Seçilenlerle Başvurulara Geç
+            Seçilenlere Geç
           </button>
         </div>
       </div>
@@ -464,9 +469,6 @@ function Landing({ onContinue }) {
               <h5 className="card-title">Arama Sonuçları</h5>
               <p className="text-muted mb-0">Aşağıdaki sonuçlar YKS ve AGNO değerlerinize göre sıralanmıştır.</p>
             </div>
-            <button type="button" className="btn btn-sm btn-outline-secondary" onClick={toggleAllPrograms}>
-              {isAllProgramsSelected ? 'Seçimleri Kaldır' : 'Hepsini Seç'}
-            </button>
           </div>
 
           {!hasSearched ? (
@@ -479,34 +481,33 @@ function Landing({ onContinue }) {
             <div className="list-group">
               {searchResults.map((program) => (
                 <label
-                  key={program.id}
-                  className={`list-group-item list-group-item-action d-flex align-items-start gap-3 ${selectedPrograms.includes(program.id) ? 'active' : ''}`}
-                  style={{ backgroundColor: '#e7f0ff', borderColor: '#c7dbff' }}
+                key={program.id}
+                className={`list-group-item list-group-item-action d-flex align-items-start gap-3 result-card ${selectedPrograms.includes(program.id) ? 'active' : ''}`}
                 >
-                  <input
-                    className="form-check-input mt-1"
-                    type="checkbox"
-                    checked={selectedPrograms.includes(program.id)}
-                    onChange={() => handleProgramToggle(program.id)}
-                  />
-                  <div className="flex-grow-1">
-                    <div className="d-flex justify-content-between align-items-start gap-3">
-                      <div>
-                        <strong>{program.university}</strong>
-                        <div>{program.department}</div>
-                      </div>
-                      <span className="badge bg-success">{program.degree}</span>
+                <input
+                  className="form-check-input mt-1"
+                  type="checkbox"
+                  checked={selectedPrograms.includes(program.id)}
+                  onChange={() => handleProgramToggle(program.id)}
+                />
+                <div className="flex-grow-1">
+                  <div className="d-flex justify-content-between align-items-start gap-3">
+                    <div>
+                      <strong>{program.university}</strong>
+                      <div>{program.department}</div>
                     </div>
-                      <div className="d-flex flex-wrap gap-2 align-items-center mb-1">
-                      <span className="badge text-white" style={{ backgroundColor: '#d63333' }}>
-                        AGNO {program.minAgno}
-                      </span>
-                      <span className="badge text-white" style={{ backgroundColor: '#d63333' }}>
-                        Taban YKS {program.minScore}
-                      </span>
-                    </div>
-                    <p className="mb-2" style={{ color: '#000' }}>{program.requirements}</p>
+                    <span className="badge bg-success">{program.degree}</span>
                   </div>
+                    <div className="d-flex flex-wrap gap-2 align-items-center mb-1">
+                    <span className="badge badge-agno">
+                      AGNO {program.minAgno}
+                    </span>
+                    <span className="badge badge-yks">
+                      Taban YKS {program.minScore}
+                    </span>
+                  </div>
+                  <p className="mb-2" style={{ color: '#000' }}>{program.requirements}</p>
+                </div>
                 </label>
               ))}
             </div>

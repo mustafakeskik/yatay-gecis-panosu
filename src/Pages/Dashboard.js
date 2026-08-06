@@ -3,7 +3,7 @@ import ApplicationList from "../Components/ApplicationList";
 
 const STORAGE_KEY = "yatay-gecis-basvurulari";
 
-function Dashboard({ initialApplications = [], onBack }) {
+function Dashboard({ initialApplications = [], onBack, openImmediately = false }) {
   const [applications, setApplications] = useState(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -32,6 +32,30 @@ function Dashboard({ initialApplications = [], onBack }) {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(applications));
   }, [applications]);
+
+  // helper: open multiple urls sequentially with a delay to reduce popup blocking
+  const openUrlsSequentially = (urls = [], delay = 600) => {
+    const filtered = urls.filter(Boolean);
+    filtered.forEach((url, index) => {
+      setTimeout(() => {
+        try {
+          window.open(url, "_blank", "noopener,noreferrer");
+        } catch (e) {
+          // ignore
+        }
+      }, index * delay);
+    });
+  };
+
+  // If parent requested opening transfer URLs immediately (usually triggered from Landing),
+  // open them sequentially. Browsers may still block, but sequential opens are more likely
+  // to succeed than firing many at once.
+  useEffect(() => {
+    if (openImmediately && initialApplications && initialApplications.length) {
+      const urls = initialApplications.map((a) => a.transferUrl).filter(Boolean);
+      openUrlsSequentially(urls, 600);
+    }
+  }, [openImmediately, initialApplications]);
 
   const summary = useMemo(
     () => ({
@@ -114,7 +138,23 @@ function Dashboard({ initialApplications = [], onBack }) {
         <div className="col-12">
           <div className="card shadow-sm mb-4">
             <div className="card-body">
-              <h5 className="card-title">Başvurular</h5>
+              <div className="d-flex justify-content-between align-items-start">
+                <h5 className="card-title mb-0">Başvurular</h5>
+                <div>
+                  <button
+                    type="button"
+                    className="btn btn-outline-primary btn-sm"
+                    onClick={() => {
+                      // open all transfer urls in new tabs
+                      applications.forEach((app) => {
+                        if (app.transferUrl) window.open(app.transferUrl, "_blank", "noopener,noreferrer");
+                      });
+                    }}
+                  >
+                    Tüm Başvuruları Aç
+                  </button>
+                </div>
+              </div>
               <p className="text-muted mb-0">
                 Listedeki başvuruların durumunu güncelleyebilir veya fazlalıkları silebilirsiniz.
               </p>

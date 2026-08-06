@@ -4,24 +4,6 @@ import UNIVERSITY_DOMAINS from "../data/university-domains.json";
 
 const AVAILABLE_PROGRAMS = YOK_OFFERS.offers.map((offer, index) => {
   const normalizedUniversity = offer.university.replace(/\s*\([^)]*\)$/, "");
-  const normalizeUniForUrl = (name) => {
-    const cleaned = name
-      .replace(/\s+üniversitesi?$/i, "")
-      .replace(/\s+yüksekokulu?$/i, "")
-      .replace(/\s+fakültesi?$/i, "")
-      .replace(/\s+konservatuarı?$/i, "")
-      .replace(/\s+meslek yüksekokulu?$/i, "");
-
-    return cleaned
-      .toLowerCase()
-      .replace(/ğ/g, "g")
-      .replace(/ü/g, "u")
-      .replace(/ş/g, "s")
-      .replace(/ı/g, "i")
-      .replace(/ö/g, "o")
-      .replace(/ç/g, "c")
-      .replace(/[^a-z0-9]/g, "");
-  };
 
   return {
     id: offer.id || `yok-${index}`,
@@ -136,8 +118,6 @@ function Landing({ onContinue }) {
     return hasSearched ? filteredPrograms : [];
   }, [hasSearched, filteredPrograms]);
 
-  const isAllProgramsSelected = searchResults.length > 0 && searchResults.every((program) => selectedPrograms.includes(program.id));
-
   const toggleFilter = (value, values, setValues) => {
     setValues((current) =>
       current.includes(value) ? current.filter((item) => item !== value) : [...current, value]
@@ -169,14 +149,6 @@ function Landing({ onContinue }) {
   const toggleAllCities = () => {
     const isAllSelected = selectedCities.length === CITIES.length;
     setSelectedCities(isAllSelected ? [] : CITIES);
-  };
-
-  const toggleAllPrograms = () => {
-    if (isAllProgramsSelected) {
-      setSelectedPrograms([]);
-    } else {
-      setSelectedPrograms(searchResults.map((program) => program.id));
-    }
   };
 
   const handleProgramToggle = (id) => {
